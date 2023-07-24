@@ -65,14 +65,17 @@ def get_free_slots(class_slots):
             if class_slots[i + 2] + class_slots[i + 4] <= class_slots[i]:
                 diff = class_slots[i + 2] - class_slots[i + 3] + class_slots[i + 4] - class_slots[i + 5]
                 if num_free != diff:
-                    free_slots.append(str(class_slots[i - 2]) + " - 246")
+                    num_slots_free = str(num_free - diff)
+                    free_slots.append(str(class_slots[i - 2]) + "-246: " + num_slots_free + " slots")
             else:
                 diff = class_slots[i + 2] - class_slots[i + 3]
                 if num_free != diff:
                     if class_slots[i - 2] == 101:
-                        free_slots.append(str(class_slots[i - 3]) + " - 246E")
+                        num_slots_free = str(num_free - diff)
+                        free_slots.append(str(class_slots[i - 3]) + "-246E: " + num_slots_free + " slots")
                     else:
-                        free_slots.append(str(class_slots[i - 2]) + " - 246")
+                        num_slots_free = str(num_free - diff)
+                        free_slots.append(str(class_slots[i - 2]) + "-246: " + num_slots_free + " slots")
     return free_slots
 
 
