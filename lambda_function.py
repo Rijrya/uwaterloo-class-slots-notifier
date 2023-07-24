@@ -5,11 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 import time
 import os
-import json
 import base64
-import json
-import urllib
-import urllib3
 from urllib import request, parse
 
 URL = "https://classes.uwaterloo.ca/under.html"
@@ -115,7 +111,6 @@ def lambda_handler(event, context):
     t = time.localtime()
     current_hr = time.strftime("%H", t)
     current_min = time.strftime("%M", t)
-    print(current_hr, current_min)
     start_day = False
     end_day = False
     send_message = False
