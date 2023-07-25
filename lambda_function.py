@@ -1,5 +1,4 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -18,14 +17,19 @@ TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 
 
 def get_course_info(url=URL, code=COURSE_CODE, num=COURSE_NUM):
-    options = Options()
-    options.binary_location = '/opt/headless-chromium'
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--single-process')
-    options.add_argument('--disable-dev-shm-usage')
 
-    driver = webdriver.Chrome('/opt/chromedriver', chrome_options=options)
+    # for the AWS Lambda function
+    # options = Options()
+    # options.binary_location = '/opt/headless-chromium'
+    # options.add_argument('--headless')
+    # options.add_argument('--no-sandbox')
+    # options.add_argument('--single-process')
+    # options.add_argument('--disable-dev-shm-usage')
+    #
+    # driver = webdriver.Chrome('/opt/chromedriver', chrome_options=options)
+
+    # for testing
+    driver = webdriver.Chrome()
 
     driver.get(url)
 
@@ -54,24 +58,23 @@ def get_course_info(url=URL, code=COURSE_CODE, num=COURSE_NUM):
 
 def get_free_slots(class_slots):
     free_slots = []
-
-    for i in range(len(class_slots) - 7):
-        if class_slots[i] == 90:
-            num_free = class_slots[i] - class_slots[i + 1]
-            if class_slots[i + 2] + class_slots[i + 4] <= class_slots[i]:
-                diff = class_slots[i + 2] - class_slots[i + 3] + class_slots[i + 4] - class_slots[i + 5]
-                if num_free != diff:
+    for i in range(len(class_slots)):
+        if class_slots[i] == 201:
+            num_free = class_slots[i + 1] - class_slots[i + 2]
+            if class_slots[i + 3] + class_slots[i + 5] <= class_slots[i]:
+                diff = class_slots[i + 3] - class_slots[i + 4] + class_slots[i + 5] - class_slots[i + 6]
+                if num_free > diff:
                     num_slots_free = str(num_free - diff)
-                    free_slots.append(str(class_slots[i - 2]) + "-246: " + num_slots_free + " slots")
+                    free_slots.append(str(class_slots[i - 1]) + "-246: " + num_slots_free + " slots")
             else:
-                diff = class_slots[i + 2] - class_slots[i + 3]
-                if num_free != diff:
-                    if class_slots[i - 2] == 101:
+                diff = class_slots[i + 3] - class_slots[i + 4]
+                if num_free > diff:
+                    if class_slots[i - 1] == 101:
                         num_slots_free = str(num_free - diff)
-                        free_slots.append(str(class_slots[i - 3]) + "-246E: " + num_slots_free + " slots")
+                        free_slots.append(str(class_slots[i - 2]) + "-246E: " + num_slots_free + " slots")
                     else:
                         num_slots_free = str(num_free - diff)
-                        free_slots.append(str(class_slots[i - 2]) + "-246: " + num_slots_free + " slots")
+                        free_slots.append(str(class_slots[i - 1]) + "-246: " + num_slots_free + " slots")
     return free_slots
 
 
