@@ -7,16 +7,22 @@ import os
 import base64
 from urllib import request, parse
 
-URL = "https://classes.uwaterloo.ca/under.html"
-COURSE_CODE = "CS"
-COURSE_NUM = "246"
+courses = [{"URL": "https://classes.uwaterloo.ca/under.html",
+            "COURSE_CODE": "CS",
+            "COURSE_NUM": "246",
+            "COURSE": "CS246"},
+           {"URL": "https://classes.uwaterloo.ca/under.html",
+            "COURSE_CODE": "ENGL",
+            "COURSE_NUM": "108D",
+            "COURSE": "ENGL108D"}]
+
 
 TWILIO_SMS_URL = "https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json"
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 
 
-def get_course_info(url=URL, code=COURSE_CODE, num=COURSE_NUM):
+def get_course_info(url, code, num):
 
     # for the AWS Lambda function
     # options = Options()
@@ -56,25 +62,45 @@ def get_course_info(url=URL, code=COURSE_CODE, num=COURSE_NUM):
     return class_slots
 
 
-def get_free_slots(class_slots):
+def get_free_slots(class_slots, course):
     free_slots = []
-    for i in range(len(class_slots)):
-        if class_slots[i] == 201:
-            num_free = class_slots[i + 1] - class_slots[i + 2]
-            if class_slots[i + 3] + class_slots[i + 5] <= class_slots[i]:
-                diff = class_slots[i + 3] - class_slots[i + 4] + class_slots[i + 5] - class_slots[i + 6]
-                if num_free > diff:
-                    num_slots_free = str(num_free - diff)
-                    free_slots.append(str(class_slots[i - 1]) + "-246: " + num_slots_free + " slots")
-            else:
-                diff = class_slots[i + 3] - class_slots[i + 4]
-                if num_free > diff:
-                    if class_slots[i - 1] == 101:
-                        num_slots_free = str(num_free - diff)
-                        free_slots.append(str(class_slots[i - 2]) + "-246E: " + num_slots_free + " slots")
-                    else:
+
+    ################################################################################################################
+
+    # For CS246
+    if course == "CS246":
+        for i in range(len(class_slots)):
+            if class_slots[i] == 201:
+                num_free = class_slots[i + 1] - class_slots[i + 2]
+                if class_slots[i + 3] + class_slots[i + 5] <= class_slots[i]:
+                    diff = class_slots[i + 3] - class_slots[i + 4] + class_slots[i + 5] - class_slots[i + 6]
+                    if num_free > diff:
                         num_slots_free = str(num_free - diff)
                         free_slots.append(str(class_slots[i - 1]) + "-246: " + num_slots_free + " slots")
+                else:
+                    diff = class_slots[i + 3] - class_slots[i + 4]
+                    if num_free > diff:
+                        if class_slots[i - 1] == 101:
+                            pass
+                            # No more 246E needed
+                            # num_slots_free = str(num_free - diff)
+                            # free_slots.append(str(class_slots[i - 2]) + "-246E: " + num_slots_free + " slots")
+                        else:
+                            num_slots_free = str(num_free - diff)
+                            free_slots.append(str(class_slots[i - 1]) + "-246: " + num_slots_free + " slots")
+
+    ################################################################################################################
+
+    # For ENGL108D
+    elif course == "ENGL108D":
+        for i in range(len(class_slots)):
+            if class_slots[i] < 6 and class_slots[i-1] > 2000:
+                num_free = class_slots[i+1] - class_slots[i+2]
+                if i+3 < len(class_slots) and class_slots[i+3] < 9:
+                    num_free = num_free - (class_slots[i+3] - class_slots[i+4])
+                if num_free > 0:
+                    free_slots.append(str(class_slots[i]) + "-108D: " + str(num_free) + " slots")
+
     return free_slots
 
 
@@ -108,7 +134,15 @@ def twilio_handler(message):
 
 
 def lambda_handler(event, context):
-    results = get_free_slots(get_course_info())
+
+    results = []
+
+    for i, course_params in enumerate(courses):
+        results.extend(get_free_slots(
+            get_course_info(url=courses[i]["URL"],
+                            code=courses[i]["COURSE_CODE"],
+                            num=courses[i]["COURSE_NUM"]),
+            course=courses[i]["COURSE"]))
 
     # CURRENTLY SET FOR EDT TIME
     t = time.localtime()
@@ -121,7 +155,6 @@ def lambda_handler(event, context):
     message = ""
     if current_hr == "14":
         if current_min == "32" or current_min == "33":
-            print("running")
             message = "Start of day report \n\n"
             start_day = True
     elif current_hr == "02":
@@ -129,14 +162,15 @@ def lambda_handler(event, context):
             message = "End of day report \n\n"
             end_day = True
 
-    if start_day or end_day:
-        message += "Sections with available slots (including 246E): \n\n"
+
+    if start_day or end_day and results[0]:
+        message += "Sections with available slots: \n\n"
         for section in results:
             message += section + "\n\n"
-    else:
+    elif results[0]:
         message += "NEW FREE SLOTS FOUND IN: \n\n"
         for section in results:
-            if "E" not in section:
+            if "E" not in section and "2-108D" not in section:
                 message += section + "\n\n"
                 send_message = True
 
