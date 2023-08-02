@@ -105,30 +105,32 @@ def get_free_slots(class_slots, course):
 
 
 def twilio_handler(message):
-    to_number = os.environ.get("to_number")
+    to_numbers = os.environ.get("to_numbers").split(",")
     from_number = os.environ.get("from_number")
     body = message
 
     # insert Twilio Account SID into the REST API URL
     populated_url = TWILIO_SMS_URL.format(TWILIO_ACCOUNT_SID)
-    post_params = {"To": to_number, "From": from_number, "Body": body}
 
-    # encode the parameters for Python's urllib
-    data = parse.urlencode(post_params).encode()
-    req = request.Request(populated_url)
+    for to_number in to_numbers:
+        post_params = {"To": to_number, "From": from_number, "Body": body}
 
-    # add authentication header to request based on Account SID + Auth Token
-    authentication = "{}:{}".format(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-    base64string = base64.b64encode(authentication.encode('utf-8'))
-    req.add_header("Authorization", "Basic %s" % base64string.decode('ascii'))
+        # encode the parameters for Python's urllib
+        data = parse.urlencode(post_params).encode()
+        req = request.Request(populated_url)
 
-    try:
-        # perform HTTP POST request
-        with request.urlopen(req, data) as f:
-            print("Twilio returned {}".format(str(f.read().decode('utf-8'))))
-    except Exception as e:
-        # something went wrong!
-        return e
+        # add authentication header to request based on Account SID + Auth Token
+        authentication = "{}:{}".format(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        base64string = base64.b64encode(authentication.encode('utf-8'))
+        req.add_header("Authorization", "Basic %s" % base64string.decode('ascii'))
+
+        try:
+            # perform HTTP POST request
+            with request.urlopen(req, data) as f:
+                print("Twilio returned {}".format(str(f.read().decode('utf-8'))))
+        except Exception as e:
+            # something went wrong!
+            return e
 
     return "SMS sent successfully!"
 
@@ -178,3 +180,6 @@ def lambda_handler(event, context):
         twilio_handler(message)
     else:
         return
+
+
+
